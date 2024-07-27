@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1E80bcXbsGlbT32b9RxK71RYK7n-9gZCK
 """
 
-pip install pyportfolioopt
 import streamlit as st
 import yfinance as yf
 import pandas as pd
