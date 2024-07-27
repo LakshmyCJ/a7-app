@@ -27,7 +27,7 @@ investment_amount = salary - savings_amount
 st.write(f"Your estimated monthly savings amount: ₹{savings_amount:.2f}")
 st.write(f"Amount available for investment after savings: ₹{investment_amount:.2f}")
 
-# List of stock tickers
+# List of Nifty 50 stock tickers
 tickers = ["ADANIENT.NS", "ADANIPORTS.NS", "APOLLOHOSP.NS", "ASIANPAINT.NS", "AXISBANK.NS",
            "BAJAJ-AUTO.NS", "BAJFINANCE.NS", "BAJAJFINSV.NS", "BPCL.NS", "BHARTIARTL.NS",
            "BRITANNIA.NS", "CIPLA.NS", "COALINDIA.NS", "DIVISLAB.NS", "DRREDDY.NS", "EICHERMOT.NS",
@@ -96,6 +96,7 @@ if selected_stock in stock_data:
     st.plotly_chart(fig)
 else:
     st.write(f"Data not available for {selected_stock}.")
+
 
 
 #!pip freeze > requirements.txt
