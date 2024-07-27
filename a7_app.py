@@ -14,6 +14,18 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import datetime
+from pypfopt import EfficientFrontier, risk_models, expected_returns
+
+# Load the Nifty 500 CSV
+@st.cache
+def load_nifty_500():
+    # Replace with the correct path to your CSV file
+    return pd.read_csv('/content/ind_nifty500list.csv')
+
+nifty_500_df = load_nifty_500()
+
+# Create a dictionary for user-friendly names to tickers
+company_dict = dict(zip(nifty_500_df['Company Name'], nifty_500_df['Symbol']))
 
 st.title("Investment Recommendation App: Plan Your Financial Future")
 
@@ -27,75 +39,60 @@ investment_amount = salary - savings_amount
 st.write(f"Your estimated monthly savings amount: ₹{savings_amount:.2f}")
 st.write(f"Amount available for investment after savings: ₹{investment_amount:.2f}")
 
-# List of Nifty 50 stock tickers
-tickers = ["ADANIENT.NS", "ADANIPORTS.NS", "APOLLOHOSP.NS", "ASIANPAINT.NS", "AXISBANK.NS",
-           "BAJAJ-AUTO.NS", "BAJFINANCE.NS", "BAJAJFINSV.NS", "BPCL.NS", "BHARTIARTL.NS",
-           "BRITANNIA.NS", "CIPLA.NS", "COALINDIA.NS", "DIVISLAB.NS", "DRREDDY.NS", "EICHERMOT.NS",
-           "GRASIM.NS", "HCLTECH.NS", "HDFCBANK.NS", "HDFCLIFE.NS", "HEROMOTOCO.NS", "HINDALCO.NS",
-           "HINDUNILVR.NS", "ICICIBANK.NS", "ITC.NS", "INDUSINDBK.NS", "INFY.NS", "JSWSTEEL.NS",
-           "KOTAKBANK.NS", "LTIM.NS", "LT.NS", "M&M.NS", "MARUTI.NS", "NTPC.NS", "NESTLEIND.NS",
-           "ONGC.NS", "POWERGRID.NS", "RELIANCE.NS", "SBILIFE.NS", "SHRIRAMFIN.NS", "SBIN.NS",
-           "SUNPHARMA.NS", "TCS.NS", "TATACONSUM.NS", "TATAMOTORS.NS", "TATASTEEL.NS", "TECHM.NS",
-           "TITAN.NS", "ULTRACEMCO.NS", "WIPRO.NS"]
+# Drop down to select companies
+selected_companies = st.multiselect("Select companies to include in the portfolio:", list(company_dict.keys()), max_selections=10)
+tickers = [company_dict[company] for company in selected_companies]
 
 @st.cache(allow_output_mutation=True)
-def get_stock_data(ticker):
+def get_stock_data(tickers):
     today = datetime.date.today()
-    end_date = today - datetime.timedelta(days=2)  # Get data up to yesterday
-    try:
-        data = yf.download(ticker, end=end_date.strftime('%Y-%m-%d'))
-        return data
-    except Exception as e:
-        st.error(f"Error fetching data for {ticker}: {e}")
-        return pd.DataFrame()
+    end_date = today - datetime.timedelta(days=730)  # Get data from the last 2 years
+    data = {}
+    for ticker in tickers:
+        try:
+            df = yf.download(ticker, start=(today - datetime.timedelta(days=730)).strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+            if not df.empty:
+                data[ticker] = df['Adj Close']
+        except Exception as e:
+            st.error(f"Error fetching data for {ticker}: {e}")
+    return pd.DataFrame(data)
 
-# Load data for each ticker
-stock_data = {ticker: get_stock_data(ticker) for ticker in tickers}
+# Load stock data
+stock_data = get_stock_data(tickers)
 
-# Calculate daily returns and risk
-def calculate_returns(data):
-    if data.empty:
-        return np.nan, np.nan
-    data = data.dropna()  # Remove rows with missing values
-    data['Return'] = data['Adj Close'].pct_change()
-    avg_return = data['Return'].mean()
-    risk = data['Return'].std()
-    return avg_return, risk
-
-investment_analysis = {}
-for ticker in tickers:
-    avg_return, risk = calculate_returns(stock_data.get(ticker, pd.DataFrame()))
-    investment_analysis[ticker] = {'Average Return': avg_return, 'Risk': risk}
-
-analysis_df = pd.DataFrame(investment_analysis).T
-st.write("Investment Analysis:")
-st.write(analysis_df)
-
-# Recommend investment based on risk-adjusted return
-def recommend_investment(analysis_df):
-    analysis_df = analysis_df.dropna()  # Remove stocks with missing data
-    if analysis_df.empty:
-        st.warning("No data available for analysis.")
-        return analysis_df
-    analysis_df['Risk-Adjusted Return'] = analysis_df['Average Return'] / analysis_df['Risk']
-    return analysis_df.sort_values(by='Risk-Adjusted Return', ascending=False)
-
-recommendations = recommend_investment(analysis_df)
-st.write("Investment Recommendations:")
-st.write(recommendations)
-
-if not recommendations.empty:
-    top_recommendation = recommendations.index[0]
-    st.write(f"Top investment recommendation: {top_recommendation}")
-
-# Interactive Stock Price Chart
-st.subheader("Explore Historical Stock Prices")
-selected_stock = st.selectbox("Select a stock to view its price trend:", list(stock_data.keys()))
-if selected_stock in stock_data:
-    fig = px.line(stock_data[selected_stock], x=stock_data[selected_stock].index, y="Adj Close", title=f"{selected_stock} Stock Price")
-    st.plotly_chart(fig)
+if stock_data.empty:
+    st.warning("No data available for the selected companies.")
 else:
-    st.write(f"Data not available for {selected_stock}.")
+    # Calculate daily returns
+    returns = stock_data.pct_change().dropna()
+
+    # Portfolio Optimization
+    st.subheader("Portfolio Optimization")
+
+    # Calculate expected returns and covariance matrix
+    mu = expected_returns.mean_historical_return(stock_data)
+    S = risk_models.sample_cov(stock_data)
+
+    # Optimize the portfolio
+    ef = EfficientFrontier(mu, S)
+    weights = ef.max_sharpe()  # Maximize Sharpe Ratio
+    cleaned_weights = ef.clean_weights()
+    performance = ef.portfolio_performance(verbose=True)
+
+    st.write("Optimized Portfolio Weights:")
+    st.write(cleaned_weights)
+    st.write(f"Expected annual return: {performance[0]:.2f}")
+    st.write(f"Annual volatility: {performance[1]:.2f}")
+    st.write(f"Sharpe ratio: {performance[2]:.2f}")
+
+    # Plot stock price trends
+    st.subheader("Explore Historical Stock Prices")
+    selected_stock = st.selectbox("Select a stock to view its price trend:", tickers)
+    if selected_stock in stock_data:
+        fig = px.line(stock_data[selected_stock], x=stock_data[selected_stock].index, y="Adj Close", title=f"{selected_stock} Stock Price")
+        st.plotly_chart(fig)
+    else:
+        st.write(f"Data not available for {selected_stock}.")
 
 
 
