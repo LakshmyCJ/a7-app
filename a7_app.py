@@ -56,6 +56,7 @@ stock_data = {ticker: get_stock_data(ticker) for ticker in tickers}
 def calculate_returns(data):
     if data.empty:
         return np.nan, np.nan
+    data = data.dropna()  # Remove rows with missing values
     data['Return'] = data['Adj Close'].pct_change()
     avg_return = data['Return'].mean()
     risk = data['Return'].std()
