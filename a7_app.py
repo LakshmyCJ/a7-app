@@ -112,7 +112,7 @@ if selected_stock in stock_data:
 else:
     st.write(f"Data not available for {selected_stock}.")
 
-!pip freeze > requirements.txt
+#!pip freeze > requirements.txt
 # Download the requirements.txt file
-from google.colab import files
-files.download('requirements.txt')
+#from google.colab import files
+f#iles.download('requirements.txt')
