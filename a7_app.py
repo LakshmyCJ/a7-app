@@ -26,8 +26,8 @@ savings_amount = salary * (savings_percent / 100)
 investment_amount = salary - savings_amount
 
 
-st.write(f"Your estimated monthly savings amount: ${savings_amount:.2f}")
-st.write(f"Amount available for investment after savings: ${investment_amount:.2f}")
+st.write(f"Your estimated monthly savings amount: ₹{savings_amount:.2f}")
+st.write(f"Amount available for investment after savings: ₹{investment_amount:.2f}")
 
 
 # List of stock tickers
