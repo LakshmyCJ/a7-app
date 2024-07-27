@@ -13,22 +13,19 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import datetime
 
 st.title("Investment Recommendation App: Plan Your Financial Future")
 
 # User inputs
-
-
 salary = st.number_input("Enter your monthly salary:", min_value=0, key="salary")
 savings_percent = st.slider("What percentage of your salary would you like to save?", 0, 100, 20, key="savings_percent")
 st.write("Saving consistently is key to building wealth. This slider helps you determine how much you can allocate towards savings.")
 savings_amount = salary * (savings_percent / 100)
 investment_amount = salary - savings_amount
 
-
 st.write(f"Your estimated monthly savings amount: ₹{savings_amount:.2f}")
 st.write(f"Amount available for investment after savings: ₹{investment_amount:.2f}")
-
 
 # List of stock tickers
 tickers = ["ADANIENT.NS", "ADANIPORTS.NS", "APOLLOHOSP.NS", "ASIANPAINT.NS", "AXISBANK.NS",
@@ -41,15 +38,12 @@ tickers = ["ADANIENT.NS", "ADANIPORTS.NS", "APOLLOHOSP.NS", "ASIANPAINT.NS", "AX
            "SUNPHARMA.NS", "TCS.NS", "TATACONSUM.NS", "TATAMOTORS.NS", "TATASTEEL.NS", "TECHM.NS",
            "TITAN.NS", "ULTRACEMCO.NS", "WIPRO.NS"]
 
-import datetime
-
-@st.cache
-def get_stock_data(ticker, *args, **kwargs):
+@st.cache(allow_output_mutation=True)
+def get_stock_data(ticker):
     today = datetime.date.today()
-    end_date = kwargs.get("end_date", today - datetime.timedelta(days=2))  # Get data up to yesterday
-
+    end_date = today - datetime.timedelta(days=2)  # Get data up to yesterday
     try:
-        data = yf.download(ticker, *args, end=end_date.strftime('%Y-%m-%d'))
+        data = yf.download(ticker, end=end_date.strftime('%Y-%m-%d'))
         return data
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
@@ -102,15 +96,6 @@ if selected_stock in stock_data:
 else:
     st.write(f"Data not available for {selected_stock}.")
 
-# Plot historical stock prices
-st.subheader("Stock Price Trends")
-selected_stock = st.selectbox("Select a stock to view its price trend:", tickers)
-
-if selected_stock in stock_data:
-    fig = px.line(stock_data[selected_stock], x=stock_data[selected_stock].index, y="Adj Close", title=f"{selected_stock} Stock Price")
-    st.plotly_chart(fig)
-else:
-    st.write(f"Data not available for {selected_stock}.")
 
 #!pip freeze > requirements.txt
 # Download the requirements.txt file
