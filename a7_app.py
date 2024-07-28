@@ -16,6 +16,7 @@ from pypfopt import EfficientFrontier, risk_models, expected_returns
 import requests
 import io
 
+
 # URL to the CSV file
 CSV_URL = "https://raw.githubusercontent.com/yekahaaagayeham/stocks-listed-on-nifty-500-july-2021/main/ind_nifty500list.csv"
 
@@ -103,10 +104,3 @@ else:
         st.plotly_chart(fig)
     else:
         st.write(f"Data not available for {selected_stock}.")
-
-
-
-#!pip freeze > requirements.txt
-# Download the requirements.txt file
-#from google.colab import files
-f#iles.download('requirements.txt')
