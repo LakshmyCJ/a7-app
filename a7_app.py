@@ -7,19 +7,31 @@ Original file is located at
     https://colab.research.google.com/drive/1E80bcXbsGlbT32b9RxK71RYK7n-9gZCK
 """
 
+#!pip install streamlit yfinance pandas plotly pypfopt 
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import datetime
 from pypfopt import EfficientFrontier, risk_models, expected_returns
+import requests
+import io
 
-# Load the Nifty 500 CSV
-@st.cache
+# URL to the CSV file
+CSV_URL = "https://raw.githubusercontent.com/yekahaaagayeham/stocks-listed-on-nifty-500-july-2021/main/ind_nifty500list.csv"
+
+@st.cache_data
 def load_nifty_500():
-    # Replace with the correct path to your CSV file
-    return pd.read_csv('/content/ind_nifty500list.csv')
+    # Download the CSV file content
+    response = requests.get(CSV_URL)
+
+    # Decode the content and create a file-like object
+    decoded_content = response.content.decode('utf-8')
+    file_like_object = io.StringIO(decoded_content)
+
+    # Read the CSV from the file-like object, skipping bad lines
+    df = pd.read_csv(file_like_object, on_bad_lines='skip', sep=',')
+    return df
 
 nifty_500_df = load_nifty_500()
 
@@ -42,14 +54,14 @@ st.write(f"Amount available for investment after savings: ₹{investment_amount:
 selected_companies = st.multiselect("Select companies to include in the portfolio:", list(company_dict.keys()), max_selections=10)
 tickers = [company_dict[company] for company in selected_companies]
 
-@st.cache(allow_output_mutation=True)
+@st.cache_data
 def get_stock_data(tickers):
     today = datetime.date.today()
-    end_date = today - datetime.timedelta(days=730)  # Get data from the last 2 years
+    start_date = today - datetime.timedelta(days=730)  # Get data from the last 2 years
     data = {}
     for ticker in tickers:
         try:
-            df = yf.download(ticker, start=(today - datetime.timedelta(days=730)).strftime('%Y-%m-%d'), end=end_date.strftime('%Y-%m-%d'))
+            df = yf.download(ticker, start=start_date.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))
             if not df.empty:
                 data[ticker] = df['Adj Close']
         except Exception as e:
@@ -88,11 +100,10 @@ else:
     st.subheader("Explore Historical Stock Prices")
     selected_stock = st.selectbox("Select a stock to view its price trend:", tickers)
     if selected_stock in stock_data:
-        fig = px.line(stock_data[selected_stock], x=stock_data[selected_stock].index, y="Adj Close", title=f"{selected_stock} Stock Price")
+        fig = px.line(stock_data[selected_stock], x=stock_data.index, y=selected_stock, title=f"{selected_stock} Stock Price")
         st.plotly_chart(fig)
     else:
         st.write(f"Data not available for {selected_stock}.")
-
 
 
 #!pip freeze > requirements.txt
