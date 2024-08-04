@@ -16,7 +16,6 @@ pip install streamlit yfinance pypfopt pandas plotly
 !pip install streamlit yfinance PyPortfolioOpt pandas plotly
 !pip install pyngrok
 
-tickers_df.head()
 
 import streamlit as st
 import pandas as pd
@@ -28,6 +27,8 @@ import plotly.graph_objs as go
 tickers_df = pd.read_csv('/content/ind_nifty500list.csv')
 # App title
 st.title("Investment Recommendation App: Plan Your Financial Future")
+
+tickers_df.head()
 
 # User Inputs
 st.header("User Inputs")
