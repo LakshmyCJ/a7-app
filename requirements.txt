@@ -1,6 +1,5 @@
-streamlit==1.32.0
+streamlit==1.37.0
 yfinance==0.2.41
-pandas==1.5.3
-plotly==5.10.0
-pyngrok==5.2.2
-PyPortfolioOpt==1.5.4
+pandas==2.0.3
+plotly==5.15.0
+
