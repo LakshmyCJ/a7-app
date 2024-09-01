@@ -1,57 +1,41 @@
+# Importing necessary libraries
 import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.express as px
-import datetime
 
-st.title("Simple Investment Planning App")
+# Title of the app
+st.title("Simple Stock Market Investment Planner")
 
-# Step 1: User Inputs
-st.header("Step 1: Input Your Financial Details")
-salary = st.number_input("Enter your monthly salary:", min_value=0, step=1000, key="salary")
-monthly_expenses = st.number_input("Enter your expected monthly expenses:", min_value=0, step=500, key="expenses")
-investment_amount = st.number_input("Enter the amount you wish to invest in stocks:", min_value=0, step=500, key="investment")
+# User inputs for salary, spendings, and investment
+salary = st.number_input("Enter your monthly salary:", min_value=0, value=50000, step=1000)
+spendings = st.number_input("Enter your expected monthly spendings:", min_value=0, value=20000, step=1000)
+investment_amount = st.number_input("Enter your desired investment amount:", min_value=0, value=10000, step=1000)
 
-# Calculate Savings
-savings = salary - monthly_expenses - investment_amount
-st.write(f"Your remaining savings after investment: ₹{savings:.2f}")
-
-# Step 2: Select Companies
-st.header("Step 2: Select Companies to Invest In")
-tickers = st.text_input("Enter stock tickers (comma-separated, e.g., 'AAPL,GOOGL,MSFT')", "AAPL,GOOGL,MSFT")
-tickers_list = [ticker.strip().upper() for ticker in tickers.split(",")]
-
-# Step 3: Fetch Real-Time Stock Data
-st.header("Step 3: Fetch Real-Time Stock Data")
-@st.cache_data
-def fetch_stock_data(tickers):
-    end_date = datetime.date.today()
-    start_date = end_date - datetime.timedelta(days=365)
-    data = {}
-    for ticker in tickers:
-        df = yf.download(ticker, start=start_date, end=end_date)
-        if not df.empty:
-            data[ticker] = df['Adj Close']
-    return pd.DataFrame(data)
-
-if tickers_list:
-    stock_data = fetch_stock_data(tickers_list)
-    if not stock_data.empty:
-        st.subheader("Historical Stock Prices")
-        fig = px.line(stock_data, x=stock_data.index, y=stock_data.columns, title="Stock Price Trends")
-        st.plotly_chart(fig)
-    else:
-        st.warning("No data available for the selected tickers.")
-
-# Step 4: Simple Investment Recommendation
-st.header("Step 4: Investment Recommendation")
-
-if investment_amount > 0 and not stock_data.empty:
-    st.write("Based on your input, here's a simple investment plan:")
-    equal_investment = investment_amount / len(tickers_list)
-    for ticker in tickers_list:
-        st.write(f"Invest ₹{equal_investment:.2f} in {ticker}.")
+# Calculate savings
+savings = salary - spendings - investment_amount
+if savings < 0:
+    st.warning("Your spendings and investment exceed your salary. Adjust your values.")
 else:
-    st.write("Please enter a valid investment amount and select companies.")
+    st.write(f"Your estimated savings for the month: ₹{savings}")
 
-st.write("This is a simple investment suggestion. For personalized advice, consider consulting a financial expert.")
+# Fetching real-time stock data
+st.subheader("Check Real-Time Stock Data")
+
+# Stock ticker input
+ticker = st.text_input("Enter a stock ticker (e.g., AAPL for Apple):", value="AAPL")
+
+# Fetching the stock data using yfinance
+if ticker:
+    try:
+        stock_data = yf.download(ticker, period="1y")
+        st.write(f"Displaying data for {ticker}")
+
+        # Show data
+        st.write(stock_data.tail())
+
+        # Plot stock price trends
+        fig = px.line(stock_data, x=stock_data.index, y="Adj Close", title=f"{ticker} Stock Price Over the Last Year")
+        st.plotly_chart(fig)
+    except Exception as e:
+        st.error(f"Error fetching data for {ticker}. Please check the ticker symbol and try again.")
