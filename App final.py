@@ -1,41 +1,61 @@
-# Importing necessary libraries
 import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.express as px
+from pypfopt import EfficientFrontier, risk_models, expected_returns
+import datetime
 
-# Title of the app
-st.title("Simple Stock Market Investment Planner")
+st.title("Simple Portfolio Optimization App")
 
-# User inputs for salary, spendings, and investment
-salary = st.number_input("Enter your monthly salary:", min_value=0, value=50000, step=1000)
-spendings = st.number_input("Enter your expected monthly spendings:", min_value=0, value=20000, step=1000)
-investment_amount = st.number_input("Enter your desired investment amount:", min_value=0, value=10000, step=1000)
+# Step 3: Select stocks
+st.sidebar.header("Select Your Stocks")
+stock_list = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NFLX", "NVDA", "PYPL", "ADBE"]
+selected_stocks = st.sidebar.multiselect("Select stocks for your portfolio", stock_list, ["AAPL", "MSFT", "GOOGL"])
 
-# Calculate savings
-savings = salary - spendings - investment_amount
-if savings < 0:
-    st.warning("Your spendings and investment exceed your salary. Adjust your values.")
+if not selected_stocks:
+    st.error("Please select at least one stock to continue.")
 else:
-    st.write(f"Your estimated savings for the month: ₹{savings}")
+    # Step 4: Fetch historical data
+    start_date = st.sidebar.date_input("Start date", datetime.date(2022, 1, 1))
+    end_date = st.sidebar.date_input("End date", datetime.date.today())
+    data = yf.download(selected_stocks, start=start_date, end=end_date)['Adj Close']
 
-# Fetching real-time stock data
-st.subheader("Check Real-Time Stock Data")
+    if data.empty:
+        st.error("No data found for the selected date range.")
+    else:
+        # Step 5: Calculate returns and risk
+        st.write(f"Displaying stock data from {start_date} to {end_date}")
+        st.line_chart(data)
 
-# Stock ticker input
-ticker = st.text_input("Enter a stock ticker (e.g., AAPL for Apple):", value="AAPL")
+        # Calculate daily returns
+        returns = data.pct_change().dropna()
 
-# Fetching the stock data using yfinance
-if ticker:
-    try:
-        stock_data = yf.download(ticker, period="1y")
-        st.write(f"Displaying data for {ticker}")
+        # Calculate expected returns and covariance matrix
+        mu = expected_returns.mean_historical_return(data)
+        S = risk_models.sample_cov(data)
 
-        # Show data
-        st.write(stock_data.tail())
+        # Optimize portfolio for max Sharpe ratio
+        ef = EfficientFrontier(mu, S)
+        weights = ef.max_sharpe()
+        cleaned_weights = ef.clean_weights()
+        ef.portfolio_performance(verbose=True)
 
-        # Plot stock price trends
-        fig = px.line(stock_data, x=stock_data.index, y="Adj Close", title=f"{ticker} Stock Price Over the Last Year")
+        # Show optimized portfolio
+        st.subheader("Optimized Portfolio Weights")
+        st.write(cleaned_weights)
+
+        # Step 6: Visualize Efficient Frontier
+        st.subheader("Efficient Frontier")
+
+        # Get weights and portfolio returns
+        portfolio_df = pd.DataFrame(cleaned_weights.items(), columns=["Stock", "Weight"])
+        portfolio_df.set_index("Stock", inplace=True)
+
+        fig = px.bar(portfolio_df, x=portfolio_df.index, y='Weight', title="Portfolio Weights")
         st.plotly_chart(fig)
-    except Exception as e:
-        st.error(f"Error fetching data for {ticker}. Please check the ticker symbol and try again.")
+
+        # Additional portfolio performance metrics
+        expected_annual_return, annual_volatility, sharpe_ratio = ef.portfolio_performance()
+        st.write(f"Expected annual return: {expected_annual_return:.2%}")
+        st.write(f"Annual volatility: {annual_volatility:.2%}")
+        st.write(f"Sharpe Ratio: {sharpe_ratio:.2f}")
